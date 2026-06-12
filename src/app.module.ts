@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ChannelWorker } from "./channel.worker";
+import { DispatchController } from "./dispatch.controller";
 import { validateEnvironment } from "./config/env";
 import { HealthController } from "./health.controller";
 
@@ -12,7 +13,7 @@ import { HealthController } from "./health.controller";
       validate: validateEnvironment
     })
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, DispatchController],
   providers: [ChannelWorker]
 })
 export class AppModule {}

@@ -101,7 +101,7 @@ export class ChannelWorker implements OnModuleInit, OnModuleDestroy {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         const response = await fetch(
-          `${this.config.get("CRM_SERVICE_URL", { infer: true }).replace(/\/$/, "")}/api/webhooks/channel`,
+          `${this.config.get("CRM_SERVICE_URL", { infer: true }).replace(/\/$/, "")}/api/v1/webhooks/channel`,
           {
             method: "POST",
             headers: {
@@ -125,6 +125,10 @@ export class ChannelWorker implements OnModuleInit, OnModuleDestroy {
       }
     }
     throw lastError ?? new Error("Webhook delivery failed");
+  }
+
+  async dispatch(input: CampaignDispatchJob): Promise<void> {
+    await this.simulate(input);
   }
 
   private async simulate(input: CampaignDispatchJob): Promise<void> {
