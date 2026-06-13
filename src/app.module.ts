@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { ChannelWorker } from "./channel.worker";
+import { ChannelSimulatorService } from "./channel-simulator.service";
 import { DispatchController } from "./dispatch.controller";
 import { validateEnvironment } from "./config/env";
 import { HealthController } from "./health.controller";
@@ -14,6 +14,6 @@ import { HealthController } from "./health.controller";
     })
   ],
   controllers: [HealthController, DispatchController],
-  providers: [ChannelWorker]
+  providers: [ChannelSimulatorService]
 })
 export class AppModule {}

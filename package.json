@@ -19,9 +19,7 @@
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.9",
     "@nestjs/platform-express": "^11.1.9",
-    "bullmq": "^5.64.1",
     "helmet": "^8.1.0",
-    "ioredis": "^5.8.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "zod": "^3.25.76"

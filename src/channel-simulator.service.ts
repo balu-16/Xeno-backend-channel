@@ -1,18 +1,11 @@
-import {
-  Injectable,
-  Logger,
-  OnModuleDestroy,
-  OnModuleInit
-} from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
   campaignDispatchJobSchema,
-  queueNames,
   type CampaignDispatchJob,
   type CampaignEventType,
   type ChannelWebhook
 } from "./contracts";
-import { Job, Worker } from "bullmq";
 import {
   createHash,
   createHmac,
@@ -24,50 +17,12 @@ const sleep = (milliseconds: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 @Injectable()
-export class ChannelWorker implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(ChannelWorker.name);
-  private worker?: Worker;
+export class ChannelSimulatorService {
+  private readonly logger = new Logger(ChannelSimulatorService.name);
 
   constructor(
     private readonly config: ConfigService<ChannelEnvironment, true>
   ) {}
-
-  onModuleInit(): void {
-    this.worker = new Worker(
-      queueNames.campaignDispatch,
-      async (job: Job) => {
-        const input = campaignDispatchJobSchema.parse(job.data);
-        await this.simulate(input);
-      },
-      {
-        connection: {
-          host: this.config.get("REDIS_HOST", { infer: true }),
-          port: this.config.get("REDIS_PORT", { infer: true }),
-          username: this.config.get("REDIS_USERNAME", { infer: true }),
-          password: this.config.get("REDIS_PASSWORD", { infer: true }),
-          maxRetriesPerRequest: null,
-          enableReadyCheck: false,
-          retryStrategy: (attempt: number) =>
-            Math.min(attempt * 1000, 30000),
-          ...(this.config.get("REDIS_TLS", { infer: true }) ? { tls: {} } : {})
-        },
-        concurrency: 30,
-        limiter: { max: 120, duration: 1000 }
-      }
-    );
-    this.worker.on("completed", (job) => {
-      this.logger.debug(`Dispatched ${job.id ?? "message"}`);
-    });
-    this.worker.on("error", (error) => {
-      this.logger.error(`Campaign dispatch worker unavailable: ${error.message}`);
-    });
-    this.worker.on("failed", (job, error) => {
-      this.logger.error(
-        `Dispatch ${job?.id ?? "unknown"} failed after ${job?.attemptsMade ?? 0} attempts`,
-        error.stack
-      );
-    });
-  }
 
   private score(input: CampaignDispatchJob): number {
     const digest = createHash("sha256")
@@ -127,8 +82,17 @@ export class ChannelWorker implements OnModuleInit, OnModuleDestroy {
     throw lastError ?? new Error("Webhook delivery failed");
   }
 
+  /**
+   * Schedule an async simulation. Returns immediately without waiting
+   * for the full lifecycle to complete.
+   */
   async dispatch(input: CampaignDispatchJob): Promise<void> {
-    await this.simulate(input);
+    const parsed = campaignDispatchJobSchema.parse(input);
+    void this.simulate(parsed).catch((error) => {
+      this.logger.error(
+        `Simulation failed for ${parsed.campaignId}/${parsed.customerId}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    });
   }
 
   private async simulate(input: CampaignDispatchJob): Promise<void> {
@@ -183,16 +147,5 @@ export class ChannelWorker implements OnModuleInit, OnModuleDestroy {
       orderAmount: 40 + (score % 160),
       attributionWindow: "7d"
     });
-  }
-
-  get status(): { running: boolean; paused: boolean } {
-    return {
-      running: Boolean(this.worker?.isRunning()),
-      paused: Boolean(this.worker?.isPaused())
-    };
-  }
-
-  async onModuleDestroy(): Promise<void> {
-    await this.worker?.close(true);
   }
 }

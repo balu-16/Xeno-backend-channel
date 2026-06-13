@@ -165,12 +165,6 @@ export const receiptJobSchema = z.object({
 });
 export type ReceiptJob = z.infer<typeof receiptJobSchema>;
 
-export const analyticsRefreshJobSchema = z.object({
-  campaignId: z.string().uuid(),
-  correlationId: z.string().uuid()
-});
-export type AnalyticsRefreshJob = z.infer<typeof analyticsRefreshJobSchema>;
-
 export const channelWebhookSchema = receiptJobSchema.omit({ receiptId: true });
 export type ChannelWebhook = z.infer<typeof channelWebhookSchema>;
 
@@ -251,9 +245,3 @@ export const aiToolNameSchema = z.enum([
   "getCustomerStats"
 ]);
 export type AIToolName = z.infer<typeof aiToolNameSchema>;
-
-export const queueNames = {
-  campaignDispatch: "campaign-dispatch",
-  receiptProcessing: "receipt-processing",
-  analyticsRefresh: "analytics-refresh"
-} as const;
