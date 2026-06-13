@@ -13,7 +13,4 @@ async function bootstrap(): Promise<void> {
   await app.listen(config.get("CHANNEL_PORT", { infer: true }));
 }
 
-// Export for Vercel serverless — bootstrap runs on cold start
-const server = bootstrap();
-
-export default server;
+void bootstrap();
