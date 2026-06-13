@@ -84,14 +84,25 @@ export class ChannelSimulatorService {
 
   /**
    * Schedule an async simulation. Returns immediately without waiting
-   * for the full lifecycle to complete.
+   * for the full lifecycle to complete. If the simulation fails before
+   * sending any callback, a MessageFailed event is reported back to the CRM.
    */
   async dispatch(input: CampaignDispatchJob): Promise<void> {
     const parsed = campaignDispatchJobSchema.parse(input);
-    void this.simulate(parsed).catch((error) => {
+    void this.simulate(parsed).catch(async (error) => {
       this.logger.error(
         `Simulation failed for ${parsed.campaignId}/${parsed.customerId}: ${error instanceof Error ? error.message : String(error)}`
       );
+      // Report failure back to CRM so campaign doesn't stay RUNNING forever
+      try {
+        await this.callback(parsed, "MessageFailed", {
+          reason: `Simulation error: ${error instanceof Error ? error.message : String(error)}`
+        });
+      } catch (callbackError) {
+        this.logger.error(
+          `Failed to report simulation failure for ${parsed.campaignId}/${parsed.customerId}: ${callbackError instanceof Error ? callbackError.message : String(callbackError)}`
+        );
+      }
     });
   }
 
